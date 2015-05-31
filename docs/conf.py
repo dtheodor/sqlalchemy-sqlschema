@@ -132,7 +132,7 @@ html_sidebars = {
 
 html_theme_options = {
     'github_user': 'dtheodor',
-    'github_repo': 'flask-sqlalchemy-session',
+    'github_repo': 'sqlalchemy-sqlschema',
     "github_banner": True,
     "travis_button": False
 }
