@@ -120,6 +120,5 @@ def maintain_schema(schema, session):
     :param schema: :class:`str` to be set as the SQL schema
     :param session: a :class:`~sqlalchemy.orm.session.Session` which will be
         used to set the SQL schema
-    :return: a context manager
     """
     return SchemaContextManager(schema, session)

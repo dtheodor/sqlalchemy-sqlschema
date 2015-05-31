@@ -10,18 +10,18 @@ SQLAlchemy-SQLSchema
    :maxdepth: 2
 .. currentmodule:: sqlalchemy_sqlschema
 
-SQLAlchemy-SQLSchema's main purpose is to provide the :func:`maintain_schema`
-context manager which will set the
-`SQL schema <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_
-and maintain it until the context manager exit. Multiple transactions with
-commits and rollbacks may take place inside the context manager, as well as
-nested context managers setting a different SQL schema.
+This library provides the capability to specify the active
+`SQL Schema <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_
+through the :func:`maintain_schema` context manager/decorator, which will
+maintain the selected schema until its exit. Multiple transactions with commits
+and/or rollbacks may take place inside the context manager without affecting the
+active SQL schema.
 
-The main use case for such functionality is when different schemas are used to
-implement multi-tenancy, i.e. when identical tables are placed in multiple
-different schemas, and end-users have access only to one of them. This restricts
-each end-user only to data he should be having access to, while maximizing
-re-use of code and database operations.
+The main use case for such functionality is when schemas need to be changed
+dynamically. This is often needed when using schemas to implement multi-tenancy,
+i.e. when identical tables are placed in multiple different schemas but an
+end-user has access to only one of them. This allows to maximize re-use of code
+and database operations while being an effective multi-tenancy solution.
 
 SQL schemas are not supported by all databases. PostgreSQL is one of them and
 supported by this library. An implementation for
@@ -37,7 +37,9 @@ Usage
 -----
 
 Assuming you have hold of a :class:`~sqlalchemy.orm.session.Session`, you can
-use :func:`maintain_schema` as follows::
+use :func:`maintain_schema` as follows:
+
+.. code-block:: python
 
     from sqlalchemy_sqlschema import maintain_schema
 
@@ -50,6 +52,17 @@ use :func:`maintain_schema` as follows::
         session.rollback()
         # a rollback still maintains the schema
         assert session.execute("show search_path").scalar() == "my_schema"
+
+
+Implementation
+--------------
+
+The SQL schema is set by using dialect-specific SQL clauses, of which only the
+`PostgreSQL implementations <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_
+are available. SQL Alchemy events are used to set
+the schema again right after a commit/rollback (which by default reset the
+schema to the database default).
+
 
 
 API
@@ -66,11 +79,13 @@ API
 Web Application Example
 -----------------------
 
-A useful scenario is a web application that redirects different users to
+A useful scenario is when a web application redirects different users to
 different SQL schemas.
 
 First, we need a way to know the SQL schema per user. In this case, it is a
-column on the user table directly::
+column on the user table directly:
+
+.. code-block:: python
 
     from sqlalchemy import Column, Integer, String
     from sqlalchemy.ext.declarative import declarative_base
@@ -83,8 +98,9 @@ column on the user table directly::
 
 
 Let's setup our web application to set the right SQL schema. In this case we
-are using Flask and Flask-Login to get access to the ``current_user``::
+are using Flask and Flask-Login to get access to the ``current_user``:
 
+.. code-block:: python
 
     from flask import Flask, jsonify
     from flask_login import current_user
@@ -94,34 +110,43 @@ are using Flask and Flask-Login to get access to the ``current_user``::
     @app.route("/api/data")
     def data():
         with maintain_schema(current_user.schema, session)
-            # the Data table needs to exist in the schema that has been set
-            # by the current_user, otherwise this query will fail
-            data = session.query(Data).all()
+            data = session.query(MyModel).all()
             return jsonify(data=data)
 
 
-More succinctly, this can be achieved by using a decorator::
+In the example above, the table of ``MyModel`` needs to exist in the selected
+schema otherwise the query will fail. Settng the schema also means that the
+user is "locked" in that schema and cannot see any other tables in
+different schemas.
 
+The above can be achienved more succinctly with a decorator:
 
-    def maintain_user_schema(f):
-        """Call `maintain_schema` on the current_user's schema."""
-        def decorator(*args, **kwargs):
-            with maintain_schema(current_user.schema, session):
-                return f(*args, **kwargs)
-        return decorator
+.. code-block:: python
+
+    from decorator import decorator
+
+    @decorator
+    def set_user_schema(f, *args, **kwargs):
+        """Call `maintain_schema` with the current_user's schema."""
+        with maintain_schema(current_user.schema, session):
+            return f(*args, **kwargs)
 
     @app.route("/api/data")
-    @maintain_user_schema
+    @set_user_schema
     def data():
         data = session.query(Data).all()
         return jsonify(data=data)
 
 
-The same decorator could be applied in a :class:`~flask.views.View`::
+The same decorator could be applied in a :class:`~flask.views.View`:
+
+.. code-block:: python
+
+    from flask import View
 
     class SecretView(View):
         methods = ['GET']
-        decorators = [maintain_user_schema]
+        decorators = [set_user_schema]
 
         def dispatch_request(self):
             # ...
