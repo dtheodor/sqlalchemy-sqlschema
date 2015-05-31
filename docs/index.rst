@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 SQLAlchemy-SQLSchema
-================================================
+====================
 
 .. toctree::
    :maxdepth: 2
@@ -116,11 +116,11 @@ are using Flask and Flask-Login to get access to the ``current_user``:
 
 
 In the example above, the table of ``MyModel`` needs to exist in the selected
-schema otherwise the query will fail. Settng the schema also means that the
+schema otherwise the query will fail. Setting the schema also means that the
 user is "locked" in that schema and cannot see any other tables in
 different schemas.
 
-The above can be achienved more succinctly with a decorator:
+The above can be achieved more succinctly with a decorator:
 
 .. code-block:: python
 
