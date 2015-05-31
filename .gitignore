@@ -1,0 +1,10 @@
+.idea
+venv
+*.egg*
+dist
+docs/_build
+*.pyc
+__pycache__
+.tox
+.vagrant
+.coverage

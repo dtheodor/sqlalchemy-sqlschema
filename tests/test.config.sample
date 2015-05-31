@@ -1,0 +1,12 @@
+# The tests will try to read a database url from the 'postgresql' section.
+# The configuration file will be either 'tests/test.config', or its path can be
+# set by the TEST_CONFIG environment variable
+
+[postgresql]
+sqlalchemy.url=postgresql://test:test@localhost:5432/tests
+echo=False
+schema=test_schema
+
+#[mssql] # NYI
+
+#[oracle] # NYI
