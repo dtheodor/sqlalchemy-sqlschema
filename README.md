@@ -18,8 +18,8 @@ with maintain_schema("my_schema", session):
     # the following query needs to find a `my_schema.my_model_table` table
     session.query(MyModel) 
 
-    session.rollback()
     # a rollback still maintains the schema
+    session.rollback()
     assert session.execute("show search_path").scalar() == "my_schema"
 ```
 

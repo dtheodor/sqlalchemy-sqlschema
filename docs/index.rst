@@ -47,10 +47,11 @@ use :func:`maintain_schema` as follows:
         schema = session.execute("show search_path").scalar()
         assert schema == "my_schema"
 
-        session.query(MyModel) # MyModel needs to exist in "my_schema"
+        # the following query needs to find a `my_schema.my_model_table` table
+        session.query(MyModel)
 
-        session.rollback()
         # a rollback still maintains the schema
+        session.rollback()
         assert session.execute("show search_path").scalar() == "my_schema"
 
 
