@@ -8,6 +8,8 @@ http://sqlalchemy-sqlschema.readthedocs.org
 
 ###Usage
 
+As a context manager:
+
 ```python
 from sqlalchemy_sqlschema import maintain_schema
 
@@ -21,6 +23,17 @@ with maintain_schema("my_schema", session):
     # a rollback still maintains the schema
     session.rollback()
     assert session.execute("show search_path").scalar() == "my_schema"
+```
+
+As a decorator:
+
+```python
+from sqlalchemy_sqlschema import maintain_schema
+
+@maintain_schema("my_schema", session):
+def query_data():
+    assert session.execute("show search_path").scalar() == "my_schema"
+    return session.query(MyModel).all() 
 ```
 
 An example of dynamically changing the SQL schema based on the current user in

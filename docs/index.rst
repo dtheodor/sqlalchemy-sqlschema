@@ -37,7 +37,7 @@ Usage
 -----
 
 Assuming you have hold of a :class:`~sqlalchemy.orm.session.Session`, you can
-use :func:`maintain_schema` as follows:
+use :func:`maintain_schema` as a context manager:
 
 .. code-block:: python
 
@@ -54,6 +54,17 @@ use :func:`maintain_schema` as follows:
         session.rollback()
         assert session.execute("show search_path").scalar() == "my_schema"
 
+
+Or as a decorator:
+
+.. code-block:: python
+
+    from sqlalchemy_sqlschema import maintain_schema
+
+    @maintain_schema("my_schema", session)
+    def query_data():
+        assert session.execute("show search_path").scalar() == "my_schema"
+        return session.query(MyModel).all()
 
 Implementation
 --------------

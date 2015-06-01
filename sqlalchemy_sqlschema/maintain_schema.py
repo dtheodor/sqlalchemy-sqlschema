@@ -2,6 +2,8 @@
 """
 Provides the :func:`maintain_schema` context manager.
 """
+from functools import wraps
+
 from sqlalchemy import event
 
 try:
@@ -12,6 +14,7 @@ except ImportError:
 from .sql import set_schema, get_schema
 
 __all__ = ["maintain_schema"]
+
 
 class _Stack(list):
     """A :class:`list` with `top`, `pop`, and `push` methods to give it a
@@ -49,10 +52,10 @@ class SchemaContextManager(object):
             cls._local.stack = _Stack()
         return cls._local.stack
 
-    def _create_new_tx_listener(self, schema):
+    @staticmethod
+    def _create_new_tx_listener(schema):
         def set_schema_listener(session, transaction, connection):
             session.execute(set_schema(schema))
-
         return set_schema_listener
 
     @staticmethod
@@ -94,11 +97,18 @@ class SchemaContextManager(object):
         if self.prev_listener:
             self._enable_listener(self.prev_listener, self.session)
 
+    def __call__(self, f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            with self:
+                return f(*args, **kwargs)
+        return decorated
+
 
 def maintain_schema(schema, session):
-    """Context manager that will apply the SQL schema ``schema`` using the
-    ``session``. The ``schema`` will persist across different transactions, if
-    these happen within the context manager's body.
+    """Context manager/decorator that will apply the SQL schema ``schema`` using
+     the ``session``. The ``schema`` will persist across different transactions,
+    if these happen within the context manager's body.
 
     After the context manager exits, it will restore the SQL schema that was
     found to be active when it was entered.
