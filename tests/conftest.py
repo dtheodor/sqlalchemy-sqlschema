@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on May 08, 2015
-
-@author: dimitris.theodorou
-
-Py.test fixtures.
+Py.test fixtures to setup database engines and the test schema.
 """
 import os
 from ConfigParser import SafeConfigParser
@@ -12,7 +8,7 @@ from collections import namedtuple
 
 import pytest
 from sqlalchemy import create_engine, pool, event
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker
 
 CONFIG_FILE = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
@@ -27,7 +23,7 @@ DbConfig = namedtuple("DbConfig", [
 ])
 
 @pytest.fixture(scope="session")
-def test_db_configurations():
+def test_dbs():
     """Return a dictionary mapping database keys to their corresponding sql
     alchemy configuration
     """
@@ -50,70 +46,57 @@ def test_db_configurations():
             )
     return db_configs
 
-
 @pytest.fixture(scope="session")
-def postgresql_engine(test_db_configurations):
+def pg_engine(test_dbs):
     """Initialize and return an SQL alchemy postgresql engine to be used with
     tests. Runs once for the test session.
     """
-    pg_config = test_db_configurations["postgresql"]
+    pg_config = test_dbs["postgresql"]
     if pg_config is None:
-        return None
+        pytest.skip("No PostgreSQL database configured.")
 
     print "SQL Alchemy tetscase: Using database '{}'".format(pg_config.db_url)
     engine = create_engine(pg_config.db_url,
                            echo=pg_config.echo,
                            poolclass=pool.NullPool)
-
-    engine.execute("CREATE EXTENSION IF NOT EXISTS hstore")
-    engine.execute("CREATE EXTENSION IF NOT EXISTS citext")
-    engine.execute("CREATE EXTENSION IF NOT EXISTS btree_gist")
     return engine
 
 @pytest.yield_fixture(scope="session")
-def session_factory(postgresql_engine):
-    sessionmaker_ = sessionmaker(bind=postgresql_engine)
+def pg_session_factory(pg_engine):
+    sessionmaker_ = sessionmaker(bind=pg_engine)
     yield sessionmaker_
     sessionmaker_.close_all()
 
 @pytest.yield_fixture
-def session(session_factory):
-    session = session_factory()
+def pg_session(pg_session_factory):
+    session = pg_session_factory()
     yield session
     session.close()
 
-@pytest.fixture
-def reset_schema_for_session(session):
-    session.execute("set search_path to public;")
-
-@pytest.fixture(scope="session")
-def test_schema(request, sqlalchemy_engine, test_config):
+@pytest.yield_fixture(scope="session")
+def pg_test_schema(pg_engine, test_dbs):
     """Create a schema within which the tests will be run, return the name of
-    that schema, and drop it to cleanup
+    that schema, and drop it on cleanup
     """
-    test_schema_name = test_config.test_schema
-    return _new_schema(test_schema_name, request, sqlalchemy_engine)
+    pg_config = test_dbs["postgresql"]
+    test_schema = pg_config.test_schema
 
-
-def _new_schema(schema_name, request, engine):
-    """Create a new schema with name `schema_name`, return that name, and drop
-    it on cleanup
-    """
     def drop_schema():
-        engine.execute("DROP SCHEMA IF EXISTS {schema} CASCADE".format(
-            schema=schema_name))
-
+        pg_engine.execute(
+            "DROP SCHEMA IF EXISTS {schema} CASCADE".format(schema=test_schema))
     drop_schema()
-    engine.execute("CREATE SCHEMA {schema}".format(schema=schema_name))
-    print("Created schema '{}'".format(schema_name))
-    request.addfinalizer(drop_schema)
-    return schema_name
+    pg_engine.execute(
+        "CREATE SCHEMA {schema}".format(schema=test_schema))
+    print("Created Postgres schema '{}'".format(test_schema))
+    yield test_schema
+    drop_schema()
+
 
 @pytest.yield_fixture
-def maintain_test_schema(sqlalchemy_engine, test_schema):
-    """Set the postgres schema to `test_schema` on all new db connections
+def maintain_pg_test_schema(pg_engine, pg_test_schema):
+    """Set the postgres schema to `pg_test_schema` on all new db connections
     """
-    clear_event = maintain_pg_schema(sqlalchemy_engine, test_schema)
+    clear_event = maintain_pg_schema(pg_engine, pg_test_schema)
     yield
     clear_event()
 
@@ -121,10 +104,9 @@ def maintain_pg_schema(engine, schema):
     """Create an event that sets the search_path to "`schema`,public" every time
     a new connection is made to the db.
 
-    :return: function: a function that will clear the event
+    :return: a function that will clear the event
     """
-    search_path = schema + ",public"  # need public as well for extensions
-    set_schema_sql = "SET search_path TO {}".format(search_path)
+    set_schema_sql = "SET search_path TO {}".format(schema)
 
     @event.listens_for(engine, "connect")
     def init_search_path(connection, conn_record):
@@ -139,51 +121,12 @@ def maintain_pg_schema(engine, schema):
 
     return clear_event
 
-
-@pytest.yield_fixture
-def lightweight_sqlalchemy_session(request, sqlalchemy_engine):
-    """Create a "lightweight" sql alchemy scoped_session to be used in tests.
-
-    The session commits and rollbacks all changes within SAVEPOINTS that exist
-    within a single transaction, so that everything can be undone at the end
-    of the test by doing a transaction.rollback(). This is faster than the
-    alternative of doing full-blown transactions and truncating all tables
-    as cleanup
+@pytest.fixture(scope="session")
+def mssql_engine(test_dbs):
+    """Initialize and return an SQL alchemy MS SQL engine to be used with
+    tests. Runs once for the test session.
     """
-    connection = sqlalchemy_engine.connect()
+    mssql_config = test_dbs["mssql"]
+    if mssql_config is None:
+        pytest.skip("No MS SQL database configured.")
 
-    # begin a non-ORM transaction
-    trans = connection.begin()
-
-    # bind an individual Session to the connection
-    session = scoped_session(sessionmaker(bind=connection))
-
-    # start the session in a SAVEPOINT...
-    session.begin_nested()
-
-    # then each time that SAVEPOINT ends, reopen it
-    @event.listens_for(session, "after_transaction_end")
-    def restart_savepoint(session, transaction):
-        if transaction.nested and not transaction._parent.nested:
-            session.expire_all()
-            # expire all session-held objects to have the same behavior
-            # of a regular commit() or rollback()
-            session.begin_nested()
-
-    if request.instance:
-        request.instance.connection = connection
-        request.instance.trans = trans
-        request.instance.session = session
-
-    yield session
-
-    session.rollback()
-    session.remove()
-
-    # rollback - everything that happened with the
-    # Session above (including calls to commit())
-    # is rolled back.
-    trans.rollback()
-
-    # return connection to the Engine
-    connection.close()

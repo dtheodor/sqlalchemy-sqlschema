@@ -26,28 +26,3 @@ class TestPostgresSqlCompilation(object):
         set_schema_stmt = set_schema("new_schema")
         assert str(set_schema_stmt.compile(dialect=pg_dialect())) == \
                "SET search_path TO new_schema"
-
-@pytest.mark.usefixtures("reset_schema_for_session")
-class TestPostgresSqlStatementExecution(object):
-
-    def test_get_schema(self, session):
-        assert session.execute(get_schema()).scalar() == \
-               session.execute("show search_path").scalar() == \
-               'public'
-
-        session.execute("set search_path to new_schema")
-
-        assert session.execute(get_schema()).scalar() == \
-               session.execute("show search_path").scalar() == \
-               'new_schema'
-
-
-    def test_set_schema(self, session):
-        session.execute(set_schema("another_schema"))
-        assert session.execute("show search_path").scalar() == \
-               "another_schema"
-
-        session.execute(set_schema("another_schema,public"))
-        assert session.execute("show search_path").scalar() == \
-               "another_schema, public"
-
