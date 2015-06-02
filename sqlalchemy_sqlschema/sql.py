@@ -5,38 +5,51 @@ SQL expressions and their complilation were built using the following as a
 guideline:
 http://docs.sqlalchemy.org/en/latest/core/compiler.html#compiling-sub-elements-of-a-custom-expression-construct
 """
+
 from sqlalchemy.sql.expression import Executable, ClauseElement
 from sqlalchemy.ext.compiler import compiles
 
-
 __all__ = ["get_schema", "set_schema"]
 
+
 class GetSchema(Executable, ClauseElement):
+    """Clause used to retrieve the active schema."""
     pass
 
+
 class SetSchema(Executable, ClauseElement):
+    """Clause used to set the active schema."""
     def __init__(self, schema):
         self.schema = schema
 
+
 @compiles(GetSchema)
 def _get_schema(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
     raise NotImplementedError(
         "'get_schema' is not implemented for dialect '{dialect_name}'"
-            .format(dialect_name=compiler.dialect.name))
+        .format(dialect_name=compiler.dialect.name))
+
 
 @compiles(SetSchema)
 def _set_schema(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
     raise NotImplementedError(
         "'set_schema' is not implemented for dialect '{dialect_name}'"
-            .format(dialect_name=compiler.dialect.name))
+        .format(dialect_name=compiler.dialect.name))
+
 
 @compiles(GetSchema, 'postgresql')
 def _pg_show_search_path(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
     return "SHOW search_path"
+
 
 @compiles(SetSchema, 'postgresql')
 def _pg_set_search_path(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
     return "SET search_path TO {0}".format(element.schema)
+
 
 def get_schema():
     """An executable SQL Alchemy clause that can be used to get the active SQL
@@ -53,6 +66,7 @@ def get_schema():
     'public'
     """
     return GetSchema()
+
 
 def set_schema(schema):
     """An executeble SQL Alchemy clause that can be sed to set the active SQL

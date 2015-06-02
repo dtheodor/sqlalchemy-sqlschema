@@ -16,7 +16,7 @@ from .sql import set_schema, get_schema
 __all__ = ["maintain_schema"]
 
 
-class _Stack(list):
+class Stack(list):
     """A :class:`list` with `top`, `pop`, and `push` methods to give it a
     stack-like API.
     """
@@ -24,11 +24,13 @@ class _Stack(list):
 
     @property
     def top(self):
+        """Return the last element or None if the list is empty."""
         return self[-1] if self else None
 
     push = list.append
 
     def pop(self):
+        """:meth:`list.pop` that returns `None` if the list is empty"""
         try:
             list.pop(self)
         except IndexError:
@@ -39,31 +41,46 @@ class SchemaContextManager(object):
     """Implements the context manager for applying the SQL schema, see
     :func:`maintain_schema`.
     """
+    # pylint: disable=too-few-public-methods
     def __init__(self, schema, session):
         self.schema = schema
         self.session = session
         self.new_tx_listener = self._create_new_tx_listener(schema)
+        # stores the schema to be restored on context manager exit
+        self.prev_schema = None
+        # stores the listener to be reinstated on context manager exit
+        self.prev_listener = None
 
     _local = local()
 
     @classmethod
     def _get_schema_stack(cls):
+        """Return a thread-local :class:`Stack`.
+
+        We need to use a thread-local variable to store the previous active
+        schema if we want to support nesting the context manager."""
         if not hasattr(cls._local, "stack"):
-            cls._local.stack = _Stack()
+            cls._local.stack = Stack()
         return cls._local.stack
 
     @staticmethod
     def _create_new_tx_listener(schema):
+        """Create and return a function to be used with the "after_begin" SQL
+        Alchemy event that will set the schema to ``schema``.
+        """
         def set_schema_listener(session, transaction, connection):
+            # pylint: disable=unused-argument, missing-docstring
             session.execute(set_schema(schema))
         return set_schema_listener
 
     @staticmethod
     def _cancel_listener(new_tx_listener, session):
+        # pylint: disable=missing-docstring
         event.remove(session, "after_begin", new_tx_listener)
 
     @staticmethod
     def _enable_listener(new_tx_listener, session):
+        # pylint: disable=missing-docstring
         event.listen(session, "after_begin", new_tx_listener)
 
     def __enter__(self):
@@ -98,6 +115,7 @@ class SchemaContextManager(object):
             self._enable_listener(self.prev_listener, self.session)
 
     def __call__(self, f):
+        # pylint: disable=invalid-name, missing-docstring
         @wraps(f)
         def decorated(*args, **kwargs):
             with self:
@@ -107,7 +125,7 @@ class SchemaContextManager(object):
 
 def maintain_schema(schema, session):
     """Context manager/decorator that will apply the SQL schema ``schema`` using
-     the ``session``. The ``schema`` will persist across different transactions,
+    the ``session``. The ``schema`` will persist across different transactions,
     if these happen within the context manager's body.
 
     After the context manager exits, it will restore the SQL schema that was
