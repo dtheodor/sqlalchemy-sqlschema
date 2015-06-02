@@ -32,7 +32,7 @@ class Stack(list):
     def pop(self):
         """:meth:`list.pop` that returns `None` if the list is empty"""
         try:
-            list.pop(self)
+            return list.pop(self)
         except IndexError:
             return None
 
