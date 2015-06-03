@@ -16,6 +16,8 @@ install:
 # command to run tests
 script: tox
 services: postgresql
+addons:
+  postgresql: "9.3"
 before_script:
   - sh -c "if [ -n '$POSTGRESQL_URL' ]; then psql -c 'create database travis_ci_test;' -U postgres; fi"
 branches:
