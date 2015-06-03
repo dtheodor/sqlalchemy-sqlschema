@@ -10,11 +10,15 @@ env:
   - TOXENV=pypy3
   - TOXENV=lint
   - TOXENV=coverage
-  - TOXENV=postgresql
+  - TOXENV=postgresql POSTGRESQL_URL=postgres://postgres:@localhost:5432/travis_ci_test
 install:
   - "pip install tox"
 # command to run tests
 script: tox
+services: postgresql
+before_script:
+  - sh -c "if [ -n '$POSTGRESQL_URL' ]; then psql -c 'create database travis_ci_test;' -U postgres; fi"
+  - psql -c 'create database travis_ci_test;' -U postgres
 branches:
   only:
     - master
