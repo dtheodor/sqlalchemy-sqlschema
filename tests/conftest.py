@@ -5,7 +5,10 @@ Py.test fixtures to setup database engines and the test schema.
 from __future__ import print_function
 
 import os
-from ConfigParser import SafeConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser as ConfigParser
 from collections import namedtuple
 
 import pytest
@@ -42,9 +45,8 @@ def update_config_from_file(db_configs):
     """Update each value of the `db_configs` if not already configured and
     there is a corresponding entry in the configuration file.
     """
-    conf = SafeConfigParser(
-        defaults={"echo": "off",
-                  "schema": DEFAULT_TEST_SCHEMA})
+    conf = ConfigParser(defaults={"echo": "off",
+                                  "schema": DEFAULT_TEST_SCHEMA})
     if not os.path.isfile(CONFIG_FILE):
         return
 
