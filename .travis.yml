@@ -9,7 +9,7 @@ env:
   - TOXENV=pypy
   - TOXENV=pypy3
   - TOXENV=lint
-  - TOXENV=coverage
+  #- TOXENV=coverage
   - TOXENV=postgresql POSTGRESQL_URL=postgres://postgres:@localhost:5432/travis_ci_test
 install:
   - "pip install tox"
