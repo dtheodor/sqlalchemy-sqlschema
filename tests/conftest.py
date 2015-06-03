@@ -2,6 +2,8 @@
 """
 Py.test fixtures to setup database engines and the test schema.
 """
+from __future__ import print_function
+
 import os
 from ConfigParser import SafeConfigParser
 from collections import namedtuple
@@ -84,7 +86,7 @@ def pg_engine(test_dbs):
     if pg_config is None:
         pytest.skip("No PostgreSQL database configured.")
 
-    print "SQL Alchemy tetscase: Using database '{}'".format(pg_config.db_url)
+    print("SQL Alchemy tetscase: Using database '{}'".format(pg_config.db_url))
     engine = create_engine(pg_config.db_url,
                            echo=pg_config.echo,
                            poolclass=pool.NullPool)

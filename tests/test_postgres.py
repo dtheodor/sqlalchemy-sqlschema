@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Tests run against a PostgreSQL database.
 """

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Contains the SQL expressions to get and set the SQL schema.
 
