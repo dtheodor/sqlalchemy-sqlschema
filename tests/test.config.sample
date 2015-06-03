@@ -3,7 +3,7 @@
 # set by the TEST_CONFIG environment variable
 
 [postgresql]
-sqlalchemy.url=postgresql://test:test@localhost:5432/tests
+url=postgresql://test:test@localhost:5432/tests
 echo=False
 schema=test_schema
 
