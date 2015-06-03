@@ -4,8 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/dtheodor/sqlalchemy-sqlschema/badge.svg?branch=master)](https://coveralls.io/r/dtheodor/sqlalchemy-sqlschema?branch=master)
 
 Provides a context manager to dynamically modify the active
-[SQL Schema](http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH).
-Works for PostgreSQL. Useful for implementing multi-tenancy.
+[SQL Schema](http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH), useful for implementing multi-tenancy. Implemented for PostgreSQL.
 
 http://sqlalchemy-sqlschema.readthedocs.org
 
