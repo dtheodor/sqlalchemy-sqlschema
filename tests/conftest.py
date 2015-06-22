@@ -36,14 +36,14 @@ def test_dbs():
                   "mssql": None,
                   "oracle": None}
 
-    update_config_from_env(db_configs)
     update_config_from_file(db_configs)
+    update_config_from_env(db_configs)
 
     return db_configs
 
 def update_config_from_file(db_configs):
-    """Update each value of the `db_configs` if not already configured and
-    there is a corresponding entry in the configuration file.
+    """Update each value of the `db_configs` if there is a corresponding entry
+    in the configuration file.
     """
     conf = ConfigParser(defaults={"echo": "off",
                                   "schema": DEFAULT_TEST_SCHEMA})
@@ -52,7 +52,7 @@ def update_config_from_file(db_configs):
 
     conf.read(CONFIG_FILE)
     for db_section in db_configs.keys():
-        if db_configs[db_section] is None and conf.has_section(db_section):
+        if conf.has_section(db_section):
             db_configs[db_section] = DbConfig(
                 db_url=conf.get(db_section, "url"),
                 echo=conf.getboolean(db_section, "echo"),
@@ -60,23 +60,22 @@ def update_config_from_file(db_configs):
             )
 
 def update_config_from_env(db_configs):
-    """Update each value of the `db_configs` if not already configured and the
-    environment variable with database_name + _URL is found. For example for
-    postgres valid environment variables are:
+    """Update each value of the `db_configs` if the environment variable with
+    database_name + _URL is found. For example for postgres valid environment
+    variables are:
     POSTGRESQL_URL
     POSTGRESQL_ECHO
     POSTGRESQL_SCHEMA
     """
     for db_section in db_configs.keys():
-        if db_configs[db_section] is None:
-            prefix = db_section.upper() + "_"
-            if prefix + "URL" in os.environ:
-                db_configs[db_section] = DbConfig(
-                    db_url=os.environ.get(prefix + "URL"),
-                    echo=prefix + "ECHO" in os.environ,
-                    test_schema=os.environ.get(prefix + "SCHEMA",
-                                               DEFAULT_TEST_SCHEMA)
-                )
+        prefix = db_section.upper() + "_"
+        if prefix + "URL" in os.environ:
+            db_configs[db_section] = DbConfig(
+                db_url=os.environ.get(prefix + "URL"),
+                echo=prefix + "ECHO" in os.environ,
+                test_schema=os.environ.get(prefix + "SCHEMA",
+                                           DEFAULT_TEST_SCHEMA)
+            )
 
 
 @pytest.fixture(scope="session")
