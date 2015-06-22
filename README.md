@@ -65,5 +65,5 @@ a database to be used for the tests. Then you can run the tests by invoking
 ### TODO
 
 1. Consider how to integrate with Alembic
-2. Support MS SQL
-3. Support Oracle
+2. Test Oracle
+3. See if MS SQL supports this
