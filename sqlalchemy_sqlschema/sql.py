@@ -27,12 +27,14 @@ class SetSchema(Executable, ClauseElement):
 @compiles(GetSchema)
 def _get_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
+    # made up statement
     return "SHOW SCHEMA"
 
 
 @compiles(SetSchema)
 def _set_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
+    # ANSI SQL statement
     return "SET SCHEMA {0}".format(element.schema)
 
 
@@ -46,6 +48,18 @@ def _pg_show_search_path(element, compiler, **kw):
 def _pg_set_search_path(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
     return "SET search_path TO {0}".format(element.schema)
+
+
+@compiles(GetSchema, 'oracle')
+def _oracle_current_schema(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
+    return "SELECT sys_context('USERENV', 'CURRENT_SCHEMA') FROM dual"
+
+
+@compiles(SetSchema, 'oracle')
+def _oracle_set_current_schema(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
+    return "ALTER SESSION SET CURRENT_SCHEMA = {0}".format(element.schema)
 
 
 def get_schema():
