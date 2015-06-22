@@ -10,12 +10,10 @@ from sqlalchemy_sqlschema.sql import set_schema, get_schema
 
 class TestDefaultSqlCompilation(object):
     def test_default_get_schema(self):
-        with pytest.raises(NotImplementedError):
-            str(get_schema())
+        assert str(get_schema()) == "SHOW SCHEMA"
 
     def test_default_set_schema(self):
-        with pytest.raises(NotImplementedError):
-            str(set_schema("new_schema"))
+        assert str(set_schema("new_schema")) == "SET SCHEMA new_schema"
 
 class TestPostgresSqlCompilation(object):
     def test_pg_get_schema(self):

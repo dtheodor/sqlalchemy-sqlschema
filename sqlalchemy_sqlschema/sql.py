@@ -27,17 +27,13 @@ class SetSchema(Executable, ClauseElement):
 @compiles(GetSchema)
 def _get_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
-    raise NotImplementedError(
-        "'get_schema' is not implemented for dialect '{dialect_name}'"
-        .format(dialect_name=compiler.dialect.name))
+    return "SHOW SCHEMA"
 
 
 @compiles(SetSchema)
 def _set_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
-    raise NotImplementedError(
-        "'set_schema' is not implemented for dialect '{dialect_name}'"
-        .format(dialect_name=compiler.dialect.name))
+    return "SET SCHEMA {0}".format(element.schema)
 
 
 @compiles(GetSchema, 'postgresql')
