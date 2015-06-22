@@ -6,6 +6,7 @@ from functools import wraps
 from collections import defaultdict
 
 from sqlalchemy import event
+from sqlalchemy.orm import scoped_session
 
 try:
     from gevent.local import local
@@ -63,6 +64,8 @@ class SchemaContextManager(object):
         schema if we want to support nesting the context manager."""
         if not hasattr(cls._local, "schema_stacks"):
             cls._local.schema_stacks = defaultdict(Stack)
+        # make sure to get the session object, not the scoped_session proxy
+        session = session() if isinstance(session, scoped_session) else session
         # map a stack to the session
         return cls._local.schema_stacks[session]
 

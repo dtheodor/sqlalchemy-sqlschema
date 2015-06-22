@@ -256,3 +256,20 @@ def test_retrieve_default_schema(mock_session):
         assert m.new_tx_listener.call_count == 0
 
 
+@pytest.fixture
+def scoped_ses():
+    d = {"id": 0}
+    def session_id():
+        global _id
+        d["id"] += 1
+        return d["id"]
+    return scoped_session(_mock_session, scopefunc=session_id)
+
+def test_get_schema_stack_scoped_session(scoped_ses):
+    """Test that scoped_session proxies are correctly mapped to different
+    schema stacks"""
+    assert scoped_ses() is not scoped_ses()
+
+    stack = SchemaContextManager._get_schema_stack(scoped_ses)
+    stack2 = SchemaContextManager._get_schema_stack(scoped_ses)
+    assert stack is not stack2
