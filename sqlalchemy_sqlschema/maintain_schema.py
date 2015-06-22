@@ -14,29 +14,9 @@ except ImportError:
     from threading import local
 
 from .sql import set_schema, get_schema
+from .util import Stack
 
 __all__ = ["maintain_schema"]
-
-
-class Stack(list):
-    """A :class:`list` with `top`, `pop`, and `push` methods to give it a
-    stack-like API.
-    """
-    __slots__ = ()
-
-    @property
-    def top(self):
-        """Return the last element or None if the list is empty."""
-        return self[-1] if self else None
-
-    push = list.append
-
-    def pop(self):
-        """:meth:`list.pop` that returns `None` if the list is empty"""
-        try:
-            return list.pop(self)
-        except IndexError:
-            return None
 
 
 class SchemaContextManager(object):
