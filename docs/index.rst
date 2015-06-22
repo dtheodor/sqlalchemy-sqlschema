@@ -21,7 +21,7 @@ The main use case for such functionality is when schemas need to be changed
 dynamically. This is often needed when using schemas to implement multi-tenancy,
 i.e. when identical tables are placed in multiple different schemas but an
 end-user has access to only one of them. This allows to maximize re-use of code
-and database operations while being an effective multi-tenancy solution.
+and database operations while providing isolation.
 
 SQL schemas are not supported by all databases. PostgreSQL is one of them and
 supported by this library. An implementation for
@@ -71,9 +71,10 @@ Implementation
 
 The SQL schema is set by using dialect-specific SQL clauses, of which only the
 `PostgreSQL implementations <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_
-are available. SQL Alchemy events are used to set
-the schema again right after a commit/rollback (which by default reset the
-schema to the database default).
+are implemented. SQL Alchemy events are used to set
+the schema again right after a new transaction is started (which is needed since
+a rollback will reset the schema to the value it had before the transaction
+start).
 
 
 
@@ -109,7 +110,7 @@ column on the user table directly:
         schema = Column(String)
 
 
-Let's setup our web application to set the right SQL schema. In this case we
+Let's setup our web application to set the right SQL schema. We
 are using Flask and Flask-Login to get access to the ``current_user``:
 
 .. code-block:: python
