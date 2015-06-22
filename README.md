@@ -61,3 +61,9 @@ def data():
 You need to create your own `tests/test.config` file that will provide a URL to
 a database to be used for the tests. Then you can run the tests by invoking
 `PYTHONPATH=. py.test tests/` in the repository root.
+
+### TODO
+
+1. Consider how to integrate with Alembic
+2. Support MS SQL
+3. Support Oracle
