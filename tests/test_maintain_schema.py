@@ -68,31 +68,41 @@ def mock_engine():
     engine = create_engine('sqlite://', strategy='mock', executor=dump)
     return engine
 
-@pytest.yield_fixture
-def mock_session():
+def _mock_session():
     session = Session(mock_engine)
     session._execute_calls = []
+
     class GetSchemaResult:
         def scalar(self):
-            return "schema"
+            return "default_schema"
+
     def execute(stmt, *args, **kwargs):
         session._execute_calls.append(stmt)
         if isinstance(stmt, GetSchema):
             return GetSchemaResult()
         else:
             return "executed"
-    with mock.patch.object(session, "execute", side_effect=execute):
-        yield session
+    patcher = mock.patch.object(session, "execute", side_effect=execute)
+    patcher.start()
+    return session
 
+
+@pytest.fixture
+def mock_session():
+    return _mock_session()
+
+@pytest.fixture
+def mock_session2():
+    return _mock_session()
 
 @pytest.yield_fixture
-def set_original_schema():
+def set_previous_schema():
     SchemaContextManager._get_schema_stack().push(("schema1", None))
     yield
     SchemaContextManager._get_schema_stack().pop()
 
 
-def test_retrieve_original_schema(mock_session):
+def test_retrieve_default_schema(mock_session):
     m = maintain_schema("schema2", mock_session)
     assert SchemaContextManager._get_schema_stack().top is None
     with mock.patch.object(
@@ -102,13 +112,13 @@ def test_retrieve_original_schema(mock_session):
             assert str(mock_session._execute_calls[-2]) == \
                    str(GetSchema())
             assert m.new_tx_listener.called == False
-            assert SchemaContextManager._get_schema_stack()[-2][0] == "schema"
+            assert SchemaContextManager._get_schema_stack()[-2][0] == "default_schema"
 
         # must be reverted to the original
-        assert SchemaContextManager._get_schema_stack().top[0] == "schema"
+        assert SchemaContextManager._get_schema_stack().top[0] == "default_schema"
         assert m.new_tx_listener.call_count == 0
 
-@pytest.mark.usefixtures("set_original_schema")
+@pytest.mark.usefixtures("set_previous_schema")
 class TestSessionMaintainSchema(object):
 
     def test_maintain_schema(self, mock_session):
@@ -167,7 +177,7 @@ class TestSessionMaintainSchema(object):
             assert SchemaContextManager._get_schema_stack().top[0] == "schema1"
             assert m.new_tx_listener.call_count == 1
 
-@pytest.mark.usefixtures("set_original_schema")
+@pytest.mark.usefixtures("set_previous_schema")
 class TestMaintainSchemaNested(object):
 
     def test_maintain_schema_nested(self, mock_session):
