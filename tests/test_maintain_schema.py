@@ -5,7 +5,7 @@ Test maintain_schema contextmanager
 import mock
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, scoped_session
 
 from sqlalchemy_sqlschema import maintain_schema
 from sqlalchemy_sqlschema.maintain_schema import Stack, SchemaContextManager
@@ -96,27 +96,11 @@ def mock_session2():
     return _mock_session()
 
 @pytest.yield_fixture
-def set_previous_schema():
-    SchemaContextManager._get_schema_stack().push(("schema1", None))
+def set_previous_schema(mock_session):
+    SchemaContextManager._get_schema_stack(mock_session).push(("schema1", None))
     yield
-    SchemaContextManager._get_schema_stack().pop()
+    SchemaContextManager._get_schema_stack(mock_session).pop()
 
-
-def test_retrieve_default_schema(mock_session):
-    m = maintain_schema("schema2", mock_session)
-    assert SchemaContextManager._get_schema_stack().top is None
-    with mock.patch.object(
-            m, "new_tx_listener", side_effect=m.new_tx_listener):
-        with m:
-            assert mock_session.execute.call_count == 2
-            assert str(mock_session._execute_calls[-2]) == \
-                   str(GetSchema())
-            assert m.new_tx_listener.called == False
-            assert SchemaContextManager._get_schema_stack()[-2][0] == "default_schema"
-
-        # must be reverted to the original
-        assert SchemaContextManager._get_schema_stack().top[0] == "default_schema"
-        assert m.new_tx_listener.call_count == 0
 
 @pytest.mark.usefixtures("set_previous_schema")
 class TestSessionMaintainSchema(object):
@@ -129,12 +113,11 @@ class TestSessionMaintainSchema(object):
                 assert mock_session.execute.call_count == 1
                 assert str(mock_session._execute_calls[-1]) == \
                        str(SetSchema("schema2"))
-                assert m.new_tx_listener.called == False
-                assert SchemaContextManager._get_schema_stack().top[0] == "schema2"
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
 
             # must be reverted to the original
-            assert SchemaContextManager._get_schema_stack().top[0] == "schema1"
-            assert m.new_tx_listener.call_count == 0
+            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
+            assert m.new_tx_listener.called == False
 
     @pytest.mark.skipif(True, reason="until a new transaction can be mocked")
     def test_maintain_schema_after_commit(self, mock_session):
@@ -148,13 +131,13 @@ class TestSessionMaintainSchema(object):
                 assert mock_session.execute.call_count == 3
                 assert str(mock_session._execute_calls[-1]) == \
                        str(SetSchema("schema2"))
-                assert SchemaContextManager._get_schema_stack().top[0] == "schema2"
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
 
                 m.new_tx_listener.assert_called_once_with(
                     mock_session, mock.ANY, mock.ANY)
 
             # must be reverted to the original
-            assert SchemaContextManager._get_schema_stack().top[0] == "schema1"
+            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
             assert m.new_tx_listener.call_count == 1
 
     @pytest.mark.skipif(True, reason="until a new transaction can be mocked")
@@ -168,17 +151,14 @@ class TestSessionMaintainSchema(object):
                 assert mock_session.execute.call_count == 3
                 assert str(mock_session._execute_calls[-1]) == \
                        str(SetSchema("schema2"))
-                assert SchemaContextManager._get_schema_stack().top[0] == "schema2"
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
 
                 m.new_tx_listener.assert_called_once_with(
                     mock_session, mock.ANY, mock.ANY)
 
             # must be reverted to the original
-            assert SchemaContextManager._get_schema_stack().top[0] == "schema1"
+            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
             assert m.new_tx_listener.call_count == 1
-
-@pytest.mark.usefixtures("set_previous_schema")
-class TestMaintainSchemaNested(object):
 
     def test_maintain_schema_nested(self, mock_session):
         """Test doubly nested `maintain_schema`"""
@@ -195,24 +175,84 @@ class TestMaintainSchemaNested(object):
                 assert mock_session.execute.call_count == 1
                 assert str(mock_session._execute_calls[-1]) == \
                        str(SetSchema("schema2"))
-                assert m_level1.new_tx_listener.called == False
-                assert SchemaContextManager._get_schema_stack().top[0] == "schema2"
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
 
                 with m_level2:
                     assert mock_session.execute.call_count == 2
                     assert str(mock_session._execute_calls[-1]) == \
                            str(SetSchema("schema3"))
-                    assert m_level1.new_tx_listener.called == False
-                    assert SchemaContextManager._get_schema_stack().top[0] == "schema3"
+                    assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema3"
 
                 # must be reverted to level1
                 assert mock_session.execute.call_count == 3
                 assert str(mock_session._execute_calls[-1]) == \
                        str(SetSchema("schema2"))
-                assert m_level1.new_tx_listener.called == False
-                assert SchemaContextManager._get_schema_stack().top[0] == "schema2"
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
 
             # must be reverted to the original
-            assert SchemaContextManager._get_schema_stack().top[0] == "schema1"
-            assert m_level1.new_tx_listener.call_count == 0
+            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
+            assert m_level1.new_tx_listener.called == False
+            assert m_level2.new_tx_listener.called == False
+
+    def test_maintain_schema_multiple_sessions_nested(self, mock_session, mock_session2):
+        """Test doubly nested `maintain_schema` but with different sessions"""
+
+        m_level1 = maintain_schema("schema2", mock_session)
+        m_level2 = maintain_schema("schema3", mock_session2)
+        with mock.patch.object(
+                m_level1, "new_tx_listener",
+                side_effect=m_level1.new_tx_listener), \
+            mock.patch.object(
+                m_level2, "new_tx_listener",
+                side_effect=m_level2.new_tx_listener):
+            with m_level1:
+                assert mock_session.execute.call_count == 1
+                assert str(mock_session._execute_calls[-1]) == \
+                       str(SetSchema("schema2"))
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
+
+                assert mock_session2.execute.called is False
+                assert SchemaContextManager._get_schema_stack(mock_session2).top is None
+
+                with m_level2:
+                    assert mock_session2.execute.call_count == 2
+                    assert str(mock_session2._execute_calls[-2]) == \
+                           str(GetSchema())
+                    assert str(mock_session2._execute_calls[-1]) == \
+                           str(SetSchema("schema3"))
+                    assert SchemaContextManager._get_schema_stack(mock_session2).top[0] == "schema3"
+
+                # level2 must be reverted to the original
+                assert SchemaContextManager._get_schema_stack(mock_session2).top[0] == "default_schema"
+
+                # level1 should be unchanged
+                assert mock_session.execute.call_count == 1
+                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
+
+            # level1 must be reverted to the original
+            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
+
+            assert m_level1.new_tx_listener.called is False
+            assert m_level2.new_tx_listener.called is False
+
+
+def test_retrieve_default_schema(mock_session):
+    """Test that if no schema is already found the existing value will be
+    retrieved by the db
+    """
+    m = maintain_schema("schema2", mock_session)
+    assert SchemaContextManager._get_schema_stack(mock_session).top is None
+    with mock.patch.object(
+            m, "new_tx_listener", side_effect=m.new_tx_listener):
+        with m:
+            assert mock_session.execute.call_count == 2
+            assert str(mock_session._execute_calls[-2]) == \
+                   str(GetSchema())
+            assert m.new_tx_listener.called == False
+            assert SchemaContextManager._get_schema_stack(mock_session)[-2][0] == "default_schema"
+
+        # must be reverted to the original
+        assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "default_schema"
+        assert m.new_tx_listener.call_count == 0
+
 

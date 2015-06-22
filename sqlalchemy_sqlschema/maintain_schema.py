@@ -3,6 +3,7 @@
 Provides the :func:`maintain_schema` context manager.
 """
 from functools import wraps
+from collections import defaultdict
 
 from sqlalchemy import event
 
@@ -54,14 +55,16 @@ class SchemaContextManager(object):
     _local = local()
 
     @classmethod
-    def _get_schema_stack(cls):
-        """Return a thread-local :class:`Stack`.
+    def _get_schema_stack(cls, session):
+        """Return a thread-local :class:`Stack` containing the schemas of the
+        ``session``.
 
         We need to use a thread-local variable to store the previous active
         schema if we want to support nesting the context manager."""
-        if not hasattr(cls._local, "stack"):
-            cls._local.stack = Stack()
-        return cls._local.stack
+        if not hasattr(cls._local, "schema_stacks"):
+            cls._local.schema_stacks = defaultdict(Stack)
+        # map a stack to the session
+        return cls._local.schema_stacks[session]
 
     @staticmethod
     def _create_new_tx_listener(schema):
@@ -84,7 +87,7 @@ class SchemaContextManager(object):
         event.listen(session, "after_begin", new_tx_listener)
 
     def __enter__(self):
-        schema_stack = self._get_schema_stack()
+        schema_stack = self._get_schema_stack(self.session)
         if schema_stack.top is None:
             schema_stack.push(
                 (self.session.execute(get_schema()).scalar(), None))
@@ -103,7 +106,7 @@ class SchemaContextManager(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        schema_stack = self._get_schema_stack()
+        schema_stack = self._get_schema_stack(self.session)
         # 1. remove schema from the stack
         schema_stack.pop()
         # 2. stop the current listener
