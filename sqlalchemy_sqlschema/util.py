@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Utils.
+"""
+
 
 class Stack(list):
     """A :class:`list` with `top`, `pop`, and `push` methods to give it a
