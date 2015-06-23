@@ -33,7 +33,7 @@ setup(
     packages=["sqlalchemy_sqlschema"],
     author="Dimitris Theodorou",
     author_email="dimitris.theodorou@gmail.com",
-    url='http://github.com/dtheodor/sqlalchemy_sqlschema',
+    url='http://github.com/dtheodor/sqlalchemy-sqlschema',
     license="MIT",
     description='Set the SQL schema over multiple transactions.',
     long_description=__doc__,
