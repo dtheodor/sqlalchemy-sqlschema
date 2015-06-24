@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/dtheodor/sqlalchemy-sqlschema/badge.svg?branch=master)](https://coveralls.io/r/dtheodor/sqlalchemy-sqlschema?branch=master)
 
 Provides a context manager to modify the active
-[SQL Schema](http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH), implemented for PostgreSQL.
+[SQL Schema](http://www.postgresql.org/docs/9.4/static/ddl-schemas.html#DDL-SCHEMAS-PATH), implemented for PostgreSQL and Oracle.
 
 http://sqlalchemy-sqlschema.readthedocs.org
 
@@ -59,11 +59,13 @@ def data():
 ### Tests
 
 You need to create your own `tests/test.config` file that will provide a URL to
-a database to be used for the tests. Then you can run the tests by invoking
-`PYTHONPATH=. py.test tests/` in the repository root.
+a database to be used for the tests. Check `tests/test.config.sample` for
+options for different databases. 
+
+You can run the tests by invoking `PYTHONPATH=. py.test tests/` in the
+repository root.
 
 ### TODO
 
 1. Consider how to integrate with Alembic
-2. Test Oracle
-3. See if MS SQL supports this
+2. Implement MS SQL

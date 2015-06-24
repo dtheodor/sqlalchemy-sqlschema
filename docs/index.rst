@@ -11,11 +11,11 @@ SQLAlchemy-SQLSchema
 .. currentmodule:: sqlalchemy_sqlschema
 
 This library provides the capability to specify the active
-`SQL Schema <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_
+`SQL-schema <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_
 through the :func:`maintain_schema` context manager/decorator, which will
-maintain the selected schema until its exit. Multiple transactions with commits
-and/or rollbacks may take place inside the context manager without affecting the
-active SQL schema.
+set the active schema and maintain it until its exit. Multiple transactions with
+commits and/or rollbacks may take place inside the context manager without
+affecting the active SQL-schema.
 
 The main use case for such functionality is when schemas need to be changed
 dynamically. This is often needed when using schemas to implement multi-tenancy,
@@ -23,11 +23,12 @@ i.e. when identical tables are placed in multiple different schemas but an
 end-user has access to only one of them. This allows to maximize re-use of code
 and database operations while providing isolation.
 
-SQL schemas are not supported by all databases. PostgreSQL is one of them and
-supported by this library. An implementation for
-`Microsoft SQL <https://msdn.microsoft.com/en-us/library/ms189462.aspx>`_ and
-`Oracle <http://docs.oracle.com/cd/B19306_01/server.102/b14231/general.htm#i1107794>`_
-is yet to be developed. Any contributions appreciated!
+SQL-schemas are supported by
+`PostgreSQL <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_,
+`Oracle <http://docs.oracle.com/cd/B19306_01/server.102/b14231/general.htm#i1107794>`_,
+and `Microsoft SQL Server <https://msdn.microsoft.com/en-us/library/ms189462.aspx>`_
+(not yet supported by this library). Please contribute if you know more!
+
 
 .. contents::
    :local:
