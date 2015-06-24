@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tests run against a PostgreSQL database.
+Tests to run against a PostgreSQL database.
 """
 import mock
 import pytest
@@ -40,55 +40,39 @@ class TestSessionMaintainSchemaPostgres(object):
     def test_maintain_schema(self, pg_session, pg_test_schema):
         assert pg_session.execute("show search_path").scalar() == pg_test_schema
 
-        m = maintain_schema("test_schema_1,public", pg_session)
-        with mock.patch.object(
-                m, "new_tx_listener", side_effect=m.new_tx_listener):
-            with m:
-                assert pg_session.execute("show search_path").scalar() == \
-                       "test_schema_1, public"
-                assert m.new_tx_listener.called == False
+        with maintain_schema("test_schema_1,public", pg_session):
+            assert pg_session.execute("show search_path").scalar() == \
+                   "test_schema_1, public"
 
-            # must be reverted to the original
-            assert pg_session.execute("show search_path").scalar() == pg_test_schema
-            assert m.new_tx_listener.call_count == 0
+        # must be reverted to the original
+        assert pg_session.execute("show search_path").scalar() == pg_test_schema
 
     def test_maintain_schema_after_commit(self, pg_session, pg_test_schema):
         assert pg_session.execute("show search_path").scalar() == pg_test_schema
 
-        m = maintain_schema("test_schema_1,public", pg_session)
-        with mock.patch.object(
-                m, "new_tx_listener", side_effect=m.new_tx_listener):
-            with m:
-                assert pg_session.execute("show search_path").scalar() == \
-                       "test_schema_1, public"
-                pg_session.commit()
-                assert pg_session.execute("show search_path").scalar() == \
-                       "test_schema_1, public"
-                m.new_tx_listener.assert_called_once_with(
-                    pg_session, mock.ANY, mock.ANY)
+        with maintain_schema("test_schema_1,public", pg_session):
+            assert pg_session.execute("show search_path").scalar() == \
+                   "test_schema_1, public"
+            pg_session.commit()
+            assert pg_session.execute("show search_path").scalar() == \
+                   "test_schema_1, public"
 
-            # must be reverted to the original
-            assert pg_session.execute("show search_path").scalar() == pg_test_schema
-            assert m.new_tx_listener.call_count == 1
+        # must be reverted to the original
+        assert pg_session.execute("show search_path").scalar() == pg_test_schema
 
     def test_maintain_schema_after_rollback(self, pg_session, pg_test_schema):
         assert pg_session.execute("show search_path").scalar() == pg_test_schema
 
-        m = maintain_schema("test_schema_1,public", pg_session)
-        with mock.patch.object(
-                m, "new_tx_listener", side_effect=m.new_tx_listener):
-            with m:
-                assert pg_session.execute("show search_path").scalar() == \
-                       "test_schema_1, public"
-                pg_session.rollback()
-                assert pg_session.execute("show search_path").scalar() == \
-                       "test_schema_1, public"
-                m.new_tx_listener.assert_called_once_with(
-                    pg_session, mock.ANY, mock.ANY)
+        with maintain_schema("test_schema_1,public", pg_session):
+            assert pg_session.execute("show search_path").scalar() == \
+                   "test_schema_1, public"
+            pg_session.rollback()
+            assert pg_session.execute("show search_path").scalar() == \
+                   "test_schema_1, public"
 
-            # must be reverted to the original
-            assert pg_session.execute("show search_path").scalar() == pg_test_schema
-            assert m.new_tx_listener.call_count == 1
+        # must be reverted to the original
+        assert pg_session.execute("show search_path").scalar() == pg_test_schema
+
 
 @pytest.mark.usefixtures("maintain_pg_test_schema")
 class TestMaintainSchemaNestedPostgres(object):
@@ -99,6 +83,9 @@ class TestMaintainSchemaNestedPostgres(object):
 
         Also verify the new transaction listener has been called the right
         amount of times, which is once after a rollback and once after a commit.
+
+        TODO: remove mocks and asserts after the non-postgres test can trigger
+        new tranasctions with rollback/commit
         """
         assert pg_session.execute("show search_path").scalar() == expected_schema
         assert mgr.new_tx_listener.called == bool(called_so_far)
