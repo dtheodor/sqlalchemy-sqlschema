@@ -26,8 +26,11 @@ and database operations while providing isolation.
 SQL-schemas are supported by
 `PostgreSQL <http://www.postgresql.org/docs/9.4/static/ddl-schemas.html>`_,
 `Oracle <http://docs.oracle.com/cd/B19306_01/server.102/b14231/general.htm#i1107794>`_,
-and `Microsoft SQL Server <https://msdn.microsoft.com/en-us/library/ms189462.aspx>`_
-(not yet supported by this library). Please contribute if you know more!
+and `Microsoft SQL Server <https://msdn.microsoft.com/en-us/library/ms189462.aspx>`_.
+PostgreSQL and Oracle support temporarily setting the schema for the
+active session. The MS SQL method (with
+``ALTER USER <user> WITH DEFAULT SCHEMA <schema>``) results in permanent changes
+for a user which is rather unsafe, and is not supported by this library.
 
 
 .. contents::

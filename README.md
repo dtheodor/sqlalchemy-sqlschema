@@ -68,4 +68,3 @@ repository root.
 ### TODO
 
 1. Consider how to integrate with Alembic
-2. Implement MS SQL
