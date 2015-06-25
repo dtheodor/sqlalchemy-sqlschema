@@ -9,7 +9,7 @@ Unreleased.
 - Add decorator functionality.
 - Fix nested maintain_schema with different sessions.
 - Fix nested maintain_schema with scoped_session proxies.
-- Add oracle support (untested).
+- Add oracle support.
 
 Version 0.1
 -----------
