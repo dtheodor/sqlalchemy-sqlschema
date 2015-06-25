@@ -61,6 +61,7 @@ def _oracle_set_current_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
     return "ALTER SESSION SET CURRENT_SCHEMA = {0}".format(element.schema)
 
+
 @compiles(GetSchema, 'mssql')
 def _mssql_current_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
