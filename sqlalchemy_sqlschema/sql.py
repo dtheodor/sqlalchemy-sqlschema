@@ -61,6 +61,11 @@ def _oracle_set_current_schema(element, compiler, **kw):
     # pylint: disable=unused-argument, missing-docstring
     return "ALTER SESSION SET CURRENT_SCHEMA = {0}".format(element.schema)
 
+@compiles(GetSchema, 'mssql')
+def _mssql_current_schema(element, compiler, **kw):
+    # pylint: disable=unused-argument, missing-docstring
+    return "SELECT SCHEMA_NAME()"
+
 
 def get_schema():
     """An executable SQL Alchemy clause that can be used to get the active SQL
