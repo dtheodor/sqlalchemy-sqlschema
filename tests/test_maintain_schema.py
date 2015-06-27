@@ -5,7 +5,7 @@ Test maintain_schema contextmanager
 import mock
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Connection
+from sqlalchemy.orm.exc import FlushError
 from sqlalchemy.orm import Session, scoped_session
 
 from sqlalchemy_sqlschema import maintain_schema
@@ -73,12 +73,19 @@ def mock_session2(engine):
     session.close()
 
 @pytest.yield_fixture
-def set_previous_schema(mock_session):
-    """Push a schema in the schema stack so the stack always starts with a
-    previous schema to revert to"""
-    SchemaContextManager._get_schema_stack(mock_session).push(("schema1", None))
-    yield
-    SchemaContextManager._get_schema_stack(mock_session).pop()
+def Model(engine):
+    from sqlalchemy import Column, Integer
+    from sqlalchemy.ext.declarative import declarative_base
+
+    Base = declarative_base()
+
+    class Model(Base):
+        __tablename__ = "model"
+        id = Column(Integer, primary_key=True)
+
+    Base.metadata.create_all(engine)
+    yield Model
+    Base.metadata.drop_all(engine)
 
 
 class TestSessionMaintainSchema(object):
@@ -212,14 +219,63 @@ class TestSessionMaintainSchema(object):
                 assert SchemaContextManager._get_schema_stack(mock_session2).top[0] == "default_schema"
 
                 # level1 should be unchanged
-                assert mock_session.execute.call_count == 1
-                assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema2"
+                assert self.session.execute.call_count == 1
+                assert SchemaContextManager._get_schema_stack(self.session).top[0] == "schema2"
 
             # level1 must be reverted to the original
-            assert SchemaContextManager._get_schema_stack(mock_session).top[0] == "schema1"
+            assert SchemaContextManager._get_schema_stack(self.session).top[0] == "schema1"
 
             assert m_level1.new_tx_listener.called is False
             assert m_level2.new_tx_listener.called is False
+
+    def test_rollback_state(self, Model):
+        """Test that exiting the context manager with a session in partial rollback
+        will not cause a new exception when trying to execute the schema reset.
+        """
+
+        m = Model(id=2)
+        self.session.add(m)
+        self.session.commit()
+
+        # should raise FlushError caused by the invalid INSERT, and not the
+        # InvalidRequestError: This Session's transaction has been rolled back ...
+        with pytest.raises(FlushError):
+            with maintain_schema("schema1", self.session):
+                m2 = Model(id=2)
+                self.session.add(m2)
+                self.session.flush()
+
+    def test_handled_exception_not_swallowed(self):
+        """Test that when the contect manager exit is called while an exception
+        is being handled and the exit fails, the original exception is still
+        raised
+        """
+        class ExecuteError(Exception): pass
+        class BusinessLogicError(Exception): pass
+
+        patcher = mock.patch.object(self.session, "execute", side_effect=ExecuteError)
+
+        with pytest.raises(BusinessLogicError):
+            with maintain_schema("schema1", self.session):
+                patcher.start()
+                raise BusinessLogicError
+
+        patcher.stop()
+
+    def test_exception_raised(self):
+        """Test that when no exception is being handled, and the contect manager
+        exit failed, the exception is raised
+        """
+        class ExecuteError(Exception): pass
+
+        patcher = mock.patch.object(self.session, "execute", side_effect=ExecuteError)
+
+        with pytest.raises(ExecuteError):
+            with maintain_schema("schema1", self.session):
+                patcher.start()
+                a = 2
+
+        patcher.stop()
 
 
 def test_retrieve_default_schema(mock_session):

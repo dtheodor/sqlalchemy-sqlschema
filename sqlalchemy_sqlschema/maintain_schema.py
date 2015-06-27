@@ -95,7 +95,17 @@ class SchemaContextManager(object):
         # 2. stop the current listener
         self._cancel_listener(self.new_tx_listener, self.session)
         # 3. set the previous schema
-        self.session.execute(set_schema(self.prev_schema))
+        if self.session.is_active:
+            # if not active, then we are in a partial rollback state waiting
+            # for rollback, in which case execute will fail
+            try:
+                self.session.execute(set_schema(self.prev_schema))
+            except:
+                if exc_type:
+                    # don't swallow the exception being raised
+                    # TODO: raise from ?
+                    raise exc_val, None, exc_tb
+                raise
         # 4. bring back the previous listener
         if self.prev_listener:
             self._enable_listener(self.prev_listener, self.session)

@@ -4,8 +4,8 @@ Tests to run against a PostgreSQL database.
 """
 import mock
 import pytest
-from sqlalchemy_sqlschema.sql import set_schema, get_schema
 
+from sqlalchemy_sqlschema.sql import set_schema, get_schema
 from sqlalchemy_sqlschema import maintain_schema
 
 

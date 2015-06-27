@@ -10,6 +10,8 @@ Unreleased.
 - Fix nested maintain_schema with different sessions.
 - Fix nested maintain_schema with scoped_session proxies.
 - Add oracle support.
+- Don't try (and fail) to restore the schema if the session is in a rollback state.
+- Don't swallow handled exception in the context manager's exit.
 
 Version 0.1
 -----------
