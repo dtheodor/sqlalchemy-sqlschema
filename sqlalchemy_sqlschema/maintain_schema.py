@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from sqlalchemy import event
 from sqlalchemy.orm import scoped_session
+from six import reraise
 
 try:
     from gevent.local import local
@@ -103,8 +104,7 @@ class SchemaContextManager(object):
             except:
                 if exc_type:
                     # don't swallow the exception being raised
-                    # TODO: raise from ?
-                    raise exc_val, None, exc_tb
+                    reraise(exc_type, exc_val, exc_tb)
                 raise
         # 4. bring back the previous listener
         if self.prev_listener:

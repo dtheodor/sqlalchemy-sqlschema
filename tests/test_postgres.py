@@ -2,7 +2,10 @@
 """
 Tests to run against a PostgreSQL database.
 """
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import pytest
 
 from sqlalchemy_sqlschema.sql import set_schema, get_schema

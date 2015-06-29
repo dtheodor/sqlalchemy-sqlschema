@@ -23,7 +23,9 @@ if sys.version_info < (2, 6):
 if os.path.abspath(__file__).split(os.path.sep)[1] == 'vagrant':
     del os.link
 
-tests_require = ["pytest>=2.6", "mock>=1.0"]
+tests_require = ["pytest>=2.6"]
+if sys.version_info < (3, 0):
+    tests_require.append("mock>=1.0")
 tests_require_postgres = ["psycopg2>=2.6"]
 tests_require_all = tests_require + tests_require_postgres
 
@@ -47,7 +49,7 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
-    install_requires=["sqlalchemy>=0.9"],
+    install_requires=["sqlalchemy>=0.9", "six>=1.8"],
     tests_require=tests_require,
     extras_require={
         'docs': ["Sphinx>=1.3.1", "alabaster>=0.7.4"],

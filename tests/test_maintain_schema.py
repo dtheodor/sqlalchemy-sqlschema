@@ -2,7 +2,10 @@
 """
 Test maintain_schema contextmanager
 """
-import mock
+try:
+    from unittest import mock
+except:
+    import mock
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm.exc import FlushError
