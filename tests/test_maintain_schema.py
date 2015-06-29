@@ -60,7 +60,9 @@ def _mock_session(engine):
     return session, patcher
 
 @pytest.yield_fixture
-def mock_session(engine):
+def mock_session(engine, Model):
+    # add dependency to model to make sure session has been closed before
+    # model is dropped
     session, patcher = _mock_session(engine)
     patcher.start()
     yield session
@@ -68,7 +70,8 @@ def mock_session(engine):
     session.close()
 
 @pytest.yield_fixture
-def mock_session2(engine):
+def mock_session2(engine, Model):
+    # see `mock_session` for Model dependency
     session, patcher = _mock_session(engine)
     patcher.start()
     yield session
