@@ -60,9 +60,7 @@ def _mock_session(engine):
     return session, patcher
 
 @pytest.yield_fixture
-def mock_session(engine, Model):
-    # add dependency to model to make sure session has been closed before
-    # model is dropped
+def mock_session(engine):
     session, patcher = _mock_session(engine)
     patcher.start()
     yield session
@@ -70,15 +68,14 @@ def mock_session(engine, Model):
     session.close()
 
 @pytest.yield_fixture
-def mock_session2(engine, Model):
-    # see `mock_session` for Model dependency
+def mock_session2(engine):
     session, patcher = _mock_session(engine)
     patcher.start()
     yield session
     patcher.stop()
     session.close()
 
-@pytest.yield_fixture(scope="session")
+@pytest.fixture(scope="session")
 def Model(engine):
     from sqlalchemy import Column, Integer
     from sqlalchemy.ext.declarative import declarative_base
@@ -90,8 +87,8 @@ def Model(engine):
         id = Column(Integer, primary_key=True)
 
     Base.metadata.create_all(engine)
-    yield Model
-    Base.metadata.drop_all(engine)
+    # no cleanup needed, sqlite in-memory destroyed on test exit
+    return Model
 
 
 class TestSessionMaintainSchema(object):
