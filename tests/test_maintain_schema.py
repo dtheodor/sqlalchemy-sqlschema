@@ -75,7 +75,7 @@ def mock_session2(engine):
     patcher.stop()
     session.close()
 
-@pytest.yield_fixture
+@pytest.yield_fixture(scope="session")
 def Model(engine):
     from sqlalchemy import Column, Integer
     from sqlalchemy.ext.declarative import declarative_base
