@@ -19,9 +19,6 @@ with maintain_schema("my_schema", session):
     schema = session.execute("show search_path").scalar()
     assert schema == "my_schema"
 
-    # the following query needs to find a `my_schema.my_model_table` table
-    session.query(MyModel) 
-
     # a rollback still maintains the schema
     session.rollback()
     assert session.execute("show search_path").scalar() == "my_schema"
@@ -35,10 +32,11 @@ from sqlalchemy_sqlschema import maintain_schema
 @maintain_schema("my_schema", session):
 def query_data():
     assert session.execute("show search_path").scalar() == "my_schema"
-    return session.query(MyModel).all() 
 ```
 
-An example of dynamically changing the SQL schema based on the current user in
+Example application:
+
+Dynamically change the SQL schema based on the current user in
 a Flask application. Assumes that the user has a `schema` attribute that points
 to the desired SQL schema.
 
